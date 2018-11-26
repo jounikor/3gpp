@@ -11,8 +11,11 @@ maxNonAnchorCarriers_NB_r14 = 16
 maxAvailNarrowBands_r14 = 16
 
 #
+# in units of radio frames
+ENUM_NB_defaultPagingCycle_r13 = (128, 256, 512, 1024)
+ENUM_defaultPagingCycle = (32, 64, 128, 256)
+
 #
-ENUM_defaultPagingCycle_r13 = (128, 256, 512, 1024)
 ENUM_nB_r13 = (
     4.0, 2.0, 1.0, 1.0/2, 1.0/4, 1.0/8, 1.0/16, 1.0/32, 1.0/64, 1.0/128,
     1.0/256, 1.0/512, 1.0/1024, 0, 0, 0)
@@ -62,7 +65,7 @@ def pagingWeight_r14_to_index(s):
         return None
 
 
-def defaultPagingCycle_r13_to_index(s):
+def NB_defaultPagingCycle_r13_to_index(s):
     cyc = ("rf128", "rf256", "rf512", "rf1024")
 
     if (s is None):
@@ -95,13 +98,13 @@ def nB_r13_to_index(s):
 class PCCH_Config_NB_r13(object):
     def __init__(self, T, nB, rep ):
         if (type(T) == str):
-            T = defaultPagingCycle_r13_to_index(T)
+            T = NB_defaultPagingCycle_r13_to_index(T)
         if (type(nB) == str):
             nB = nB_r13_to_index(nB)
         if (type(rep) == str):
             rep = numrepetition_paging_to_index(rep)
         
-        self.defaultPagingCycle_r13 = ENUM_defaultPagingCycle_r13[T]
+        self.defaultPagingCycle_r13 = ENUM_NB_defaultPagingCycle_r13[T]
         self.nB_r13 = int(self.defaultPagingCycle_r13 * ENUM_nB_r13[nB])
         self.npdcch_NumRepetitionPaging_r13 = ENUM_npdcch_NumRepetitionPaging_r13[rep]
 
