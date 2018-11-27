@@ -193,8 +193,13 @@ class pagingNB(paging):
 
         # Also, the anchor carrier may have a weight
         if (sib22 and hasattr(sib22.pcch_MultiCarrierConfig_r14, "pagingWeightAnchor_r14")):
-            # Anchor carrier weight is the imdex 0 of the pagingCarriersWeight
-            #self.anchorWeight = sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
+            # Anchor carrier weight is the index 0 of the pagingCarriersWeight
+            # If pagingWeightAnchor is absent, then 36.331 sublause 6.7.3.1 for 
+            # SystemInformationBlock22-NB states that w0 (=0 weight) for anchor carrier
+            # is used, which means no paging takes place on anchor carrier.
+            # 36.304 subclause 7.1 for paging carrier will always skip W[0] as its
+            # weight is 0.
+            
             self.W[0]  = sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
             self.Wall += sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
 
@@ -244,7 +249,6 @@ class pagingNB(paging):
         #
         # Returns:
         #  carrier number (0 is the anchor)
-        #  weight
         #
         if (self.rel < 14 or self.Nn == 1):
             return 0
