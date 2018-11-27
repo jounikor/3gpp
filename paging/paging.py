@@ -160,12 +160,6 @@ class pagingLTEM(paging):
                 L = edrxie.PTW
 
         super(pagingNB,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,L)
-        return self.TeDRX > 0
-
-        pass
-
-
-
 
     def paging_PNB(self,UE_ID,imsi):
         return (UE_ID / (self.N * self.Ns)) % self.Nn
@@ -187,37 +181,37 @@ class pagingNB(paging):
         self.TeDRX = 0
         L = 0
 
+
         #
         # 34.304 subclause 7.1 for Rel-14 and greater
 
         # Index 0 is the anchor carrier.. and contains the weight of the carrier
         # Default to w0
-        self.pagingCarriersWeight = [0]
-        self._nunPagingCarriers = 1
-        self._WeightAllPagingCarriers = 0
+        self.W    = [0]
+        self.Nn   = 1
+        self.Wall = 0
 
         # Also, the anchor carrier may have a weight
         if (sib22 and hasattr(sib22.pcch_MultiCarrierConfig_r14, "pagingWeightAnchor_r14")):
             # Anchor carrier weight is the imdex 0 of the pagingCarriersWeight
             #self.anchorWeight = sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
-            self.pagingCarriersWeight[0]   = sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
-            self._WeightAllPagingCarriers += sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
+            self.W[0]  = sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
+            self.Wall += sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
 
         # If non-anchor carriers exist..
         if (sib22 and hasattr(sib22.pcch_MultiCarrierConfig_r14, "pcch_ConfigList_r14")):
-            self._maxPagingCarriers = sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14.__len__()
+            n = sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14.__len__()
             self._pcch_ConfigList_r14 = sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14
-            self._WeightAllPagingCarriers = 0
-            j = 0
+            i = 0
 
             # SIB22-NB contained configuration for non-anchor carrier paging.
-            # Calculate total weight of all non-anchor carriers.
-            while (j < self._maxPagingCarriers):
-                self._WeightAllPagingCarriers += self._pcch_ConfigList_r14[j].pagingWeight_r14
-                self.pagingCarriersWeight.append(self._pcch_ConfigList_r14[j].pagingWeight_r14)
-                j += 1
+            # Calculate cumulativer total weight of all non-anchor carriers.
+            while (i < n):
+                self.Wall += self._pcch_ConfigList_r14[i].pagingWeight_r14
+                self.W.append(self.Wall)
+                i += 1
 
-            self._nunPagingCarriers += j
+            self.Nn += n
 
             # If P-RNTI is monitored on NPDCCH and UE supports paging on a non-anchor
             # carrier then UE_ID = IMSI mod 16384
@@ -252,27 +246,19 @@ class pagingNB(paging):
         #  carrier number (0 is the anchor)
         #  weight
         #
-        if (self.rel < 14 or self._nunPagingCarriers == 1):
-            return 0,0
+        if (self.rel < 14 or self.Nn == 1):
+            return 0
 
         n = 0
-        w = 0
         UE_ID = self.get_UE_ID(imsi)
 
         # wmod = floor(UE_ID/(self.N*self.Ns)) mod W
-        wmod = (UE_ID / (self.N*self.Ns)) % self._WeightAllPagingCarriers
+        wmod = (UE_ID / (self.N*self.Ns)) % self.Wall
+        
+        while (n <= self.Nn-1 and wmod >= self.W[n]):
+            n += 1
 
-        while True:
-            w += self.pagingCarriersWeight[n]
-
-            if (wmod < w):
-                break
-            if (n+1 >= self._maxPagingCarriers):
-                break
-            else:
-                n += 1
-
-        return n,w
+        return n
 
 
 

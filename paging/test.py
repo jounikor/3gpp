@@ -14,7 +14,7 @@ if (__name__ == "__main__"):
         rrc.PCCH_Config_NB_r14("r1024","w3"),
         rrc.PCCH_Config_NB_r14(pagingweight_nb_r14="w4")
     ]
-    multicarcfg = rrc.PCCH_MultiCarrierConfig_NB_r14(nonanchors,"w1")
+    multicarcfg = rrc.PCCH_MultiCarrierConfig_NB_r14(nonanchors,"w2")
     sib22 = rrc.SystemInformationBlockType22_NB_r14(multicarcfg)
 
     print sib22.pcch_MultiCarrierConfig_r14
@@ -60,12 +60,12 @@ if (__name__ == "__main__"):
     # carrier paging takes place
     #
 
-    paging_carrier, weight = nb.paging_carrier(imsi)
+    paging_carrier = nb.paging_carrier(imsi)
 
     if (paging_carrier == 0):
-        print "Paging on anchor carrier (weight {})".format(weight)
+        print "Paging on anchor carrier"
     else:
-        print "Paging on non-anchor carrier {} (weight {})".format(paging_carrier,weight)
+        print "Paging on non-anchor carrier {}".format(paging_carrier)
 
     #
     inPH = False

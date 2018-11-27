@@ -13,7 +13,7 @@ maxAvailNarrowBands_r14 = 16
 #
 # in units of radio frames
 ENUM_NB_defaultPagingCycle_r13 = (128, 256, 512, 1024)
-ENUM_defaultPagingCycle = (32, 64, 128, 256)
+ENUM_LTEM_defaultPagingCycle = (32, 64, 128, 256)
 
 #
 ENUM_nB_r13 = (
@@ -155,7 +155,7 @@ class PCCH_MultiCarrierConfig_NB_r14(object):
         if (type(pagingweightanchor_r14) == str):
             pagingweightanchor_r14 = pagingWeight_r14_to_index(pagingweightanchor_r14)
             
-        if (pagingweightanchor_r14):
+        if (pagingweightanchor_r14 is not None):
             self.pagingWeightAnchor_r14 = ENUM_PagingWeight_NB_r14[pagingweightanchor_r14]
 
 class SystemInformationBlockType22_NB_r14(object):
