@@ -192,7 +192,7 @@ class pagingNB(paging):
         self.Wall = 0
 
         # Also, the anchor carrier may have a weight
-        if (sib22 and hasattr(sib22.pcch_MultiCarrierConfig_r14, "pagingWeightAnchor_r14")):
+        if (sib22 and hasattr(sib22, "pagingWeightAnchor_r14")):
             # Anchor carrier weight is the index 0 of the pagingCarriersWeight
             # If pagingWeightAnchor is absent, then 36.331 sublause 6.7.3.1 for 
             # SystemInformationBlock22-NB states that w0 (=0 weight) for anchor carrier
@@ -200,19 +200,18 @@ class pagingNB(paging):
             # 36.304 subclause 7.1 for paging carrier will always skip W[0] as its
             # weight is 0.
             
-            self.W[0]  = sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
-            self.Wall += sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
+            self.W[0]  = sib22.pagingWeightAnchor_r14
+            self.Wall += sib22.pagingWeightAnchor_r14
 
         # If non-anchor carriers exist..
-        if (sib22 and hasattr(sib22.pcch_MultiCarrierConfig_r14, "pcch_ConfigList_r14")):
-            n = sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14.__len__()
-            self._pcch_ConfigList_r14 = sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14
+        if (sib22 and hasattr(sib22, "dl_ConfigList_r14")):
+            n = sib22.dl_ConfigList_r14.__len__()
             i = 0
 
             # SIB22-NB contained configuration for non-anchor carrier paging.
             # Calculate cumulativer total weight of all non-anchor carriers.
             while (i < n):
-                self.Wall += self._pcch_ConfigList_r14[i].pagingWeight_r14
+                self.Wall += sib22.dl_ConfigList_r14[i].pcch_Config_r14.pagingWeight_r14
                 self.W.append(self.Wall)
                 i += 1
 

@@ -1,3 +1,6 @@
+
+import exceptions
+
 #
 #
 #
@@ -97,12 +100,9 @@ def nB_r13_to_index(s):
 # R13
 class PCCH_Config_NB_r13(object):
     def __init__(self, T, nB, rep ):
-        if (type(T) == str):
-            T = NB_defaultPagingCycle_r13_to_index(T)
-        if (type(nB) == str):
-            nB = nB_r13_to_index(nB)
-        if (type(rep) == str):
-            rep = numrepetition_paging_to_index(rep)
+        T = NB_defaultPagingCycle_r13_to_index(T)
+        nB = nB_r13_to_index(nB)
+        rep = numrepetition_paging_to_index(rep)
         
         self.defaultPagingCycle_r13 = ENUM_NB_defaultPagingCycle_r13[T]
         self.nB_r13 = int(self.defaultPagingCycle_r13 * ENUM_nB_r13[nB])
@@ -110,13 +110,35 @@ class PCCH_Config_NB_r13(object):
 
 
 class RadioResourceConfigCommonSIB_NB_r13(object):
-    def __init__(self,pcch_config_nb_r13):
+    #
+    # Params:
+    #
+    # kwargs params:
+    #   wus_Config_r15 type of WUS-ConfigPerCarrier-NB-r15
+    #
+    #
+    #
+    #
+    def __init__(self,pcch_config_nb_r13,**kwargs):
         self.pcch_Config_r13 = pcch_config_nb_r13
+
+        #
+        # [[  nprach-Config-v1530   NPRACH-ConfigSIB-NB-v1530   OPTIONAL
+        #     dl-Gap-v1530          DL-GapConfig-NB-v1530       OPTIONAL
+        #     wus-Config-r15        WUS-Config-NB-r15           OPTIONAL -- Need OE
+        # ]]
+        #
+
+        if ("wus_Config_r15" in kwargs):
+            self.wus_Config_r15 = kwargs["wus_Config_r15"]
+
 
 
 class SystemInformationBlockType2_NB_r13(object):
-    def __init__(self, radioresourceconfigcommonsib_nb_r13):
+    def __init__(self, radioresourceconfigcommonsib_nb_r13,**kwargs):
         self.radioResourceConfigCommon_r13 = radioresourceconfigcommonsib_nb_r13
+
+
 
 
 class PCCH_Config_v1310(object):
@@ -136,32 +158,72 @@ class SystemInformationBlockType1_BR_r13(object):
 # PCCH-Config-NB-r14
 
 class PCCH_Config_NB_r14(object):
-    def __init__(self, npdcch_numrepetitionpaging_r14=None, pagingweight_nb_r14=None):
-        if (pagingweight_nb_r14 is None):
-            pagingweight_nb_r14 = 0
-        if (type(npdcch_numrepetitionpaging_r14) == str):
+    def __init__(self, pagingweight_nb_r14, npdcch_numrepetitionpaging_r14=None,**kwargs):
+        if (npdcch_numrepetitionpaging_r14 is not None):
             npdcch_numrepetitionpaging_r14 = numrepetition_paging_to_index(npdcch_numrepetitionpaging_r14)
-        if (type(pagingweight_nb_r14) == str):
-            pagingweight_nb_r14 = pagingWeight_r14_to_index(pagingweight_nb_r14)
-       
-        if (npdcch_numrepetitionpaging_r14):
             self.npdcch_NumRepetitionPaging_r14 = ENUM_npdcch_NumRepetitionPaging_r14[npdcch_numrepetitionpaging_r14]
+
+        # defaults to w1
+        pagingweight_nb_r14 = pagingWeight_r14_to_index(pagingweight_nb_r14)
         self.pagingWeight_r14 = ENUM_PagingWeight_NB_r14[pagingweight_nb_r14]
 
-class PCCH_MultiCarrierConfig_NB_r14(object):
-    def __init__(self,pcch_configlist_nb_r14,pagingweightanchor_r14=None):
-        self.pcch_ConfigList_r14 = pcch_configlist_nb_r14
-            
-        if (type(pagingweightanchor_r14) == str):
-            pagingweightanchor_r14 = pagingWeight_r14_to_index(pagingweightanchor_r14)
-            
-        if (pagingweightanchor_r14 is not None):
-            self.pagingWeightAnchor_r14 = ENUM_PagingWeight_NB_r14[pagingweightanchor_r14]
+class DL_ConfigCommon_NB_r14(object):
+    def __init__(self,dl_CarrierConfig_r14,**kwargs):
+        #  dl-CarrierConfig-r14     DL-CarrierConfigCommon-NB-r14,
+        #  pcch-Config-r14          PCCH-Config-NB-r14              OPTIONAL -- Need OR
+        #  ...,
+        #  [[  wus-Config-r15       WUS-ConfigPerCarrier-NB-r15     OPTIONAL -- Cond WUS
+        #  ]]
+
+        if ("pcch_Config_r14" in kwargs):
+            self.pcch_Config_r14 = kwargs["pcch_Config_r14"]
+
+        if ("wus_Config_r15" in kwargs):
+            self.wus_Config_r15 = kwargs["wus_Config_r15"]
+
+
+class DL_ConfigCommonList_NB_r14(object):
+    def __init__(self,dl_configcommonlist_nb_r14):
+        #
+        # DL-ConfigCommonList-NB-r14 ::= SEQUENCE (SIZE (1.. maxNonAnchorCarriers-NB-r14)) OF
+        #                                        DL-ConfigCommon-NB-r14
+
+        self.DL_ConfigCommonList_NB_r14 = dl_configcommonlist_nb_r14
+
+
+class WUS_ConfigPerCarrier_NB_r15(object):
+    def __init__(self,duration):
+        # WUS-MaxDurationFactor-NB-r15 ::= ENUMERATED {one128th, one64th, one32th, one16th,
+        #                                              oneEighth, oneQuarter, oneHalf}
+
+        n = ["one128th","one64th","one32th","one16th","oneEighth","oneQuarter","oneHalf"].index(duration)
+        self.maxDurationFactor_r15 = 1.0/(128>>n)
+
+
+
+class WUS_Config_NB_r15(object):
+    def __init__(self, maxDurationFactor_r15, numPOs_r15, numDRX_CyclesRelaxed_r15,
+        timeOffsetDRX_r15, timeOffset_eDRX_Short_r15, **kwargs):
+        
+        self.maxDurationFactor_r15 = maxDurationFactor_r15
+        self.numPOs_r15 = numPOs_r15
+        self.numDRX_CyclesRelaxed_r15 = numDRX_CyclesRelaxed_r15
+        self.timeOffsetDRX_r15 = timeOffsetDRX_r15
+        self.timeOffset_eDRX_Short_r15 = timeOffset_eDRX_Short_r15
+
+        if ("timeOffset_eDRX_Long_r15" in kwargs):
+            self.timeOffset_eDRX_Long_r15 = kwargs["timeOffset_eDRX_Long_r15"]
 
 class SystemInformationBlockType22_NB_r14(object):
-    def __init__(self,pcch_multicarrierconfig_nb_r14=None):
-        if (pcch_multicarrierconfig_nb_r14):
-            self.pcch_MultiCarrierConfig_r14 = pcch_multicarrierconfig_nb_r14
+    def __init__(self,**kwargs):
+        if ("dl_ConfigList_r14" in kwargs):
+            self.dl_ConfigList_r14 = kwargs["dl_ConfigList_r14"].DL_ConfigCommonList_NB_r14
 
-# R15 (add WUS)
-#
+        if ("pagingWeightAnchor_r14" in kwargs):
+            pagingweightanchor_r14 = kwargs["pagingWeightAnchor_r14"]
+            pagingweightanchor_r14 = pagingWeight_r14_to_index(pagingweightanchor_r14)
+            self.pagingWeightAnchor_r14 = ENUM_PagingWeight_NB_r14[pagingweightanchor_r14]
+        else:
+            if (hasattr(self, "dl_ConfigList_r14") == False):
+                raise (RuntimeError("SystemInformationBlockType22_NB_r14.dl_ConfigList_r14 missing"))
+

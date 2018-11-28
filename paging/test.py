@@ -7,23 +7,23 @@ import exceptions
 
 
 if (__name__ == "__main__"):
-    nonanchors = [
-        rrc.PCCH_Config_NB_r14("r32","w1"),
-        rrc.PCCH_Config_NB_r14("r64","w2"),
-        rrc.PCCH_Config_NB_r14("r128"),
-        rrc.PCCH_Config_NB_r14("r1024","w3"),
-        rrc.PCCH_Config_NB_r14(pagingweight_nb_r14="w4")
-    ]
-    multicarcfg = rrc.PCCH_MultiCarrierConfig_NB_r14(nonanchors,"w2")
-    sib22 = rrc.SystemInformationBlockType22_NB_r14(multicarcfg)
+    nonanchors = rrc.DL_ConfigCommonList_NB_r14([
+        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w1","r32")),
+        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w2","r64")),
+        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w1","r128")),
+        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w3","r1024")),
+        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w4"))
+    ])
+    sib22 = rrc.SystemInformationBlockType22_NB_r14(dl_ConfigList_r14=nonanchors,
+                                                    pagingWeightAnchor_r14="w2")
 
-    print sib22.pcch_MultiCarrierConfig_r14
-    print sib22.pcch_MultiCarrierConfig_r14.pagingWeightAnchor_r14
-    print sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14[0].npdcch_NumRepetitionPaging_r14
-    print sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14[0].pagingWeight_r14
-    print sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14[2].npdcch_NumRepetitionPaging_r14
-    print sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14[2].pagingWeight_r14
-    print sib22.pcch_MultiCarrierConfig_r14.pcch_ConfigList_r14[4].pagingWeight_r14
+    print "** sib22 **"
+    print sib22.pagingWeightAnchor_r14
+    print sib22.dl_ConfigList_r14[0].pcch_Config_r14.npdcch_NumRepetitionPaging_r14
+    print sib22.dl_ConfigList_r14[0].pcch_Config_r14.pagingWeight_r14
+    print sib22.dl_ConfigList_r14[2].pcch_Config_r14.npdcch_NumRepetitionPaging_r14
+    print sib22.dl_ConfigList_r14[2].pcch_Config_r14.pagingWeight_r14
+    print sib22.dl_ConfigList_r14[4].pcch_Config_r14.pagingWeight_r14
 
     pcchcfg = rrc.PCCH_Config_NB_r13("rf512","halfT","r32")
     radcfg = rrc.RadioResourceConfigCommonSIB_NB_r13(pcchcfg)
