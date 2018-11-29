@@ -191,28 +191,36 @@ class DL_ConfigCommonList_NB_r14(object):
         self.DL_ConfigCommonList_NB_r14 = dl_configcommonlist_nb_r14
 
 
-class WUS_ConfigPerCarrier_NB_r15(object):
+class WUS_MaxDurationFactor_NB_r15(object):
     def __init__(self,duration):
         # WUS-MaxDurationFactor-NB-r15 ::= ENUMERATED {one128th, one64th, one32th, one16th,
         #                                              oneEighth, oneQuarter, oneHalf}
+        n = ["one128th", "one64th", "one32th", "one16th", "oneEighth", "oneQuarter", "oneHalf"].index(duration)
+        self.maxDurationFactor_r15 = 1.0 / (128 >> n)
 
-        n = ["one128th","one64th","one32th","one16th","oneEighth","oneQuarter","oneHalf"].index(duration)
-        self.maxDurationFactor_r15 = 1.0/(128>>n)
 
-
+class WUS_ConfigPerCarrier_NB_r15(object):
+    def __init__(self,wus_MaxDurationFactor_r15):
+        self.maxDurationFactor_r15 = wus_MaxDurationFactor_r15.maxDurationFactor_r15
 
 class WUS_Config_NB_r15(object):
     def __init__(self, maxDurationFactor_r15, numPOs_r15, numDRX_CyclesRelaxed_r15,
         timeOffsetDRX_r15, timeOffset_eDRX_Short_r15, **kwargs):
-        
-        self.maxDurationFactor_r15 = maxDurationFactor_r15
+
+        numPOs_r15 = 1 << ["n1","n2","n4"].index(numPOs_r15)
+        numDRX_CyclesRelaxed_r15 = 1 << ["n1","n2","n4","n8"].index(numDRX_CyclesRelaxed_r15)
+        timeOffsetDRX_r15         = {"ms40":40,"ms80":80,"ms160":160,"ms240":240}.get(timeOffsetDRX_r15)
+        timeOffset_eDRX_Short_r15 = {"ms40":40,"ms80":80,"ms160":160,"ms240":240}.get(timeOffset_eDRX_Short_r15)
+
+        self.maxDurationFactor_r15 = maxDurationFactor_r15.maxDurationFactor_r15
         self.numPOs_r15 = numPOs_r15
         self.numDRX_CyclesRelaxed_r15 = numDRX_CyclesRelaxed_r15
         self.timeOffsetDRX_r15 = timeOffsetDRX_r15
         self.timeOffset_eDRX_Short_r15 = timeOffset_eDRX_Short_r15
 
         if ("timeOffset_eDRX_Long_r15" in kwargs):
-            self.timeOffset_eDRX_Long_r15 = kwargs["timeOffset_eDRX_Long_r15"]
+            timeOffset_eDRX_Long_r15 = kwargs["timeOffset_eDRX_Long_r15"]
+            self.timeOffset_eDRX_Long_r15 = {"ms1000":1000,"ms2000":2000}.get(timeOffset_eDRX_Long_r15)
 
 class SystemInformationBlockType22_NB_r14(object):
     def __init__(self,**kwargs):
@@ -226,4 +234,20 @@ class SystemInformationBlockType22_NB_r14(object):
         else:
             if (hasattr(self, "dl_ConfigList_r14") == False):
                 raise (RuntimeError("SystemInformationBlockType22_NB_r14.dl_ConfigList_r14 missing"))
+
+# R12 - The IE UE-RadioPagingInfo-NB contains UE NB-IoT capability information needed for paging.
+class UE_RadioPagingInfo_NB_r13(object):
+    def __init__(self,**kwargs):
+        self.ue_Category_NB_r13 = 0             # == "nb1"
+
+        if ("mixedOperationMode_r15" in kwargs):
+            self.mixedOperationMode_r15 = 0     # == "supported"
+        if ("multiCarrierPaging_r14" in kwargs):
+            self.multiCarrierPaging_r14 = True
+        if ("wakeUpSignal_r15" in kwargs):
+            self.wakeUpSignal_r15 = True
+        if ("wakeUpSignalMinGap_eDRX_r15" in kwargs):
+            n = kwargs["wakeUpSignalMinGap_eDRX_r15"]
+            self.wakeUpSignalMinGap_eDRX_r15 = {"ms40":40,"ms240":240,"ms1000":1000,"ms2000":2000}.get(n)
+
 

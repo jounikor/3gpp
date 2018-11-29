@@ -126,6 +126,9 @@ class paging(object):
 
         return ((HSFN % TeDRXH) == (UE_ID_H % TeDRXH)),PTW_start,PTW_end
 
+    def get_timeout(self):
+        pass
+
 # LTE-M is TBD
 class pagingLTEM(paging):
     def __init__(self,sysbw=paging.SYSTEM_BW_5,rel=13):
