@@ -250,4 +250,12 @@ class UE_RadioPagingInfo_NB_r13(object):
             n = kwargs["wakeUpSignalMinGap_eDRX_r15"]
             self.wakeUpSignalMinGap_eDRX_r15 = {"ms40":40,"ms240":240,"ms1000":1000,"ms2000":2000}.get(n)
 
-
+#
+#   if (wakeUpSignalMinGap_eDRX_r15 does not exist):
+#        wakeUpSignalMinGap_eDRX_r15 = "40ms"
+#
+#
+#
+#
+#
+#

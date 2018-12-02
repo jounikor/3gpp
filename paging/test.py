@@ -77,13 +77,14 @@ if (__name__ == "__main__"):
 
         if (edrx is True):
             if (not inPH):
-                ph,s,e = nb.gotpaged_eDRX(s_tmsi,hsfn)
+                ph,s,e,phmod,uemod = nb.gotpaged_eDRX(s_tmsi,hsfn)
 
                 if (ph is True):
                     inPH = True
                     PTWstart = s
                     PTWend = e
                     print "PH positive: H-SFN {}, SFN {}, PTW_start {}, PTW_end {}".format(hsfn,sfn,s,e)
+                    print "\tPH modulo would be {} and UE_ID_H is {}".format(phmod,uemod)
         else:
             PTWstart = sfn
             PTWend = sfn
@@ -98,27 +99,19 @@ if (__name__ == "__main__"):
             if (PTWstart > PTWend):
                 if (sfn >= PTWstart and sfn >= PTWend):
                     p, pf, po = nb.gotpaged_DRX(imsi, sfn)
-                if (p):
-                    print "Paging 1 positive: H-SFN {}, SFN {}, PF {}, PO {}".format(hsfn,sfn,pf,po)
-                    inPH = False
-                    # Fast forward SFN when we found SF & PO for this example purposes.. 36.304 subclause 7.2 states:
-                    # "Otherwise, a UE configured with eDRX monitors POs as defined in 7.1 (i.e, based on the upper
-                    # layer configured DRX value and a default DRX value determined in 7.1), during a periodic Paging
-                    # Time Window (PTW) configured for the UE or until a paging message including the UE's NAS identity
-                    # is received for the UE during the PTW, whichever is earlier."
-                    sfn = 1023
             else:
                 if (sfn >= PTWstart and sfn <= PTWend):
                     p, pf, po = nb.gotpaged_DRX(imsi, sfn)
-                if (p):
-                    print "Paging 2 positive: H-SFN {}, SFN {}, PF {}, PO {}".format(hsfn,sfn,pf,po)
-                    inPH = False
-                    # Fast forward SFN when we found SF & PO for this example purposes.. 36.304 subclause 7.2 states:
-                    # "Otherwise, a UE configured with eDRX monitors POs as defined in 7.1 (i.e, based on the upper
-                    # layer configured DRX value and a default DRX value determined in 7.1), during a periodic Paging
-                    # Time Window (PTW) configured for the UE or until a paging message including the UE's NAS identity
-                    # is received for the UE during the PTW, whichever is earlier."
-                    sfn = 1023
+
+            if (p):
+                print "Paging positive: H-SFN {}, SFN {}, PF {}, PO {}".format(hsfn,sfn,pf,po)
+                inPH = False
+                # Fast forward SFN when we found SF & PO for this example purposes.. 36.304 subclause 7.2 states:
+                # "Otherwise, a UE configured with eDRX monitors POs as defined in 7.1 (i.e, based on the upper
+                # layer configured DRX value and a default DRX value determined in 7.1), during a periodic Paging
+                # Time Window (PTW) configured for the UE or until a paging message including the UE's NAS identity
+                # is received for the UE during the PTW, whichever is earlier."
+                sfn = 1023
 
         sfn += 1
 

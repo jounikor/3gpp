@@ -124,7 +124,7 @@ class paging(object):
 
         #print "** UE_ID_H {}, ieDRX {}, (HSFN % self.T) {}, (UE_ID_H % self.T) {}".format(UE_ID_H,ieDRX, (HSFN % T), (UE_ID_H % T))
 
-        return ((HSFN % TeDRXH) == (UE_ID_H % TeDRXH)),PTW_start,PTW_end
+        return ((HSFN % TeDRXH) == (UE_ID_H % TeDRXH)),PTW_start,PTW_end,(HSFN % TeDRXH),(UE_ID_H % TeDRXH)
 
     def get_timeout(self):
         pass
@@ -163,6 +163,19 @@ class pagingLTEM(paging):
                 L = edrxie.PTW
 
         super(pagingNB,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,L)
+
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+
+
+
 
     def paging_PNB(self,UE_ID,imsi):
         return (UE_ID / (self.N * self.Ns)) % self.Nn
