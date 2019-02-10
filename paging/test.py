@@ -28,16 +28,17 @@ if (__name__ == "__main__"):
     pcchcfg = rrc.PCCH_Config_NB_r13("rf512","halfT","r32")
     radcfg = rrc.RadioResourceConfigCommonSIB_NB_r13(pcchcfg)
     sib2 = rrc.SystemInformationBlockType2_NB_r13(radcfg)
-    print "UE specific DRX values:"
+    print "Broadcasted DRX values:"
     print  "\tdefault: ",sib2.radioResourceConfigCommon_r13.pcch_Config_r13.defaultPagingCycle_r13
     print  "\tnB: ",sib2.radioResourceConfigCommon_r13.pcch_Config_r13.nB_r13
     print  "\tnumrep: ",sib2.radioResourceConfigCommon_r13.pcch_Config_r13.npdcch_NumRepetitionPaging_r13
 
-    edrx = nas.extendedDRXparametersIE(0b0001,0b0011)
-    print "eDRAX values: ",edrx.TeDRX,edrx.PTW
+    #edrx = nas.extendedDRXparametersIE(0b0001,0b0011)
+    #print "eDRAX values: ",edrx.TeDRX,edrx.PTW
 
     nb = paging.pagingNB(14)
-    edrx = nb.configure(sib2,sib22,edrx)
+    #edrx = nb.configure(sib2,sib22,edrx)
+    edrx = nb.configure(sib2,sib22,None)
     #edrx = nb.configure(sib2,None,edrx)
 
     if (edrx):
@@ -72,8 +73,9 @@ if (__name__ == "__main__"):
     PTWstart = sfn
     PTWend = sfn
 
+    for n in xrange(1024):
     #for n in xrange(1024*1024):
-    for n in xrange(nb.TeDRX):
+    #for n in xrange(nb.TeDRX):
 
         if (edrx is True):
             if (not inPH):

@@ -196,6 +196,7 @@ class pagingNB(paging):
         modulo = 4096
         self.TeDRX = 0
         L = 0
+        TeDRX = 0
 
 
         #
@@ -254,6 +255,8 @@ class pagingNB(paging):
                 L = edrxie.PTW
 
         #print "Modulo {}, L {}".format(modulo,L)
+
+        print "-->",TeDRX
 
         super(pagingNB,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,20,L)
         return self.TeDRX > 0
