@@ -1,9 +1,3 @@
-
-import exceptions
-
-#
-#
-#
 #
 #
 #
@@ -79,6 +73,17 @@ def NB_defaultPagingCycle_r13_to_index(s):
     else:
         return None
 
+def defaultPagingCycle_r13_to_index(s):
+    cyc = ("rf32", "r64", "rf128", "rf256")
+
+    if (s is None):
+        return None
+
+    if (s in cyc):
+        return cyc.index(s)
+    else:
+        return None
+
 def nB_r13_to_index(s):
     nb = (  "fourT", "twoT", "oneT", "halfT", "quarterT", "one8thT",
             "one16thT", "one32ndT", "one64thT",
@@ -139,16 +144,34 @@ class SystemInformationBlockType2_NB_r13(object):
         self.radioResourceConfigCommon_r13 = radioresourceconfigcommonsib_nb_r13
 
 
-
+class PCCH_Config(object):
+    def __init__(self, T, nB):
+        self.defaultPagingCycle = ENUM_LTEM_defaultPagingCycle[defaultPagingCycle_r13_to_index(T)]
+        self.nB = ENUM_nB_r13[nB_r13_to_index(nB)] 
 
 class PCCH_Config_v1310(object):
-    def __init__(self,narrowbands,mpdcch_numreppag,nB):
-        self.paging_narrowBands_r13 = narrowbands
+    def __init__(self,narrowbands,mpdcch_numreppag,nB=None):
+        T = NB_defaultPagingCycle_r13_to_index(T)
+        rep = numrepetition_paging_to_index(rep)
+        self.defaultPagingCycle_r13 = ENUM_NB_defaultPagingCycle_r13[T]
+        self.mpdcch_NumRepetitionPaging_r13 = ENUM_mpdcch_NumRepetitionPaging_r13[rep]
+        
+        if (nB is not None):
+            self.nB_v1310 = ENUM_nB_r13[nB_r13_to_index(nB)]
+        else:
+            self.nB_v1310 = None
 
 
-class SystemInformationBlockType1_BR_r13(object):
-    def __init__(self,narrowbands,mpdcch_numreppag,nB,rel=13):
-        pass
+class RadioResourceConfigCommonSIB(object):
+    def __init__(self,pcch,pcch_v1310,**kwargs):
+        self.pcch_Config = pcch
+        self.pcch_Config_v1310 = pcch_v1310
+
+
+class SystemInformationBlockType2(object):
+    def __init__(self,rad,**kwargs):
+        self.radioResourceConfigCommon = rad
+
 
 
 # R14

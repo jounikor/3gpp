@@ -3,9 +3,10 @@
 #
 #
 
-import exceptions
+#import exceptions
 import rrcconfig as rrc
 import nasconfig as nas
+import math as m
 
 # See 36.304 subclause 7.2
 #    i_s=0  i_s=1   i_s=2   i_s=3
@@ -33,31 +34,35 @@ class paging(object):
     SYSTEM_BW_15  = 4
     SYSTEM_BW_20  = 5
 
-    def __init__(self,rel=13):
+    def __init__(self,rel=13,debug=False):
         self.rel = rel
+        self.debug = debug
 
+    # modulo is for calculating the UE_ID
+    # 36.304 subclause 7.1:
+    #   IMSI mod 4096, if P-RNTI is monitored on NPDCCH.
+    #   IMSI mod 16384, if P-RNTI is monitored on MPDCCH or if P-RNTI is monitored on NPDCCH
+    #   and the UE supports paging on a non-anchor carrier, and if paging configuration for
+    #   non-anchor carrier is provided in system information. 
+    # This class is RAT agnostic thus the caller has to be RAT aware.
+    
     def setparameters(self,T,TeDRX,nB,sf_pattern,modulo,shift=0,L=0):
         self.T  = T
         self.TeDRX = TeDRX
         self.nB = nB
 
-        # This code does not take into account the "fractional N" cases. This is
-        # discussed in rel-15 how it should be handled properly.
-        # "Fractional N" means the case when nB < 0.
+        # This code does not take into account the "fractional N" cases. 
         self.N  = min(T,nB)
 
         #
-        self.Ns = int(max(1,nB/T))
+        self.Ns = max(1,nB/T)
         self.sf_pattern = sf_pattern
         self.modulo = modulo
         self.shift = shift
         self.L = L
 
-    def N(self):
-        return self.N
-
-    def Ns(self):
-        return self.Ns
+        if (self.debug):
+            print(f"In setparameters() -> Ns: {self.Ns}, modulo: {self.modulo}, shift: {self.shift}, L: {self.L}")
 
     # The algorithm is described in more detail in 36.304 Annex B
     def mod2div_(self,N,D):
@@ -69,19 +74,12 @@ class paging(object):
 
         return N >> 32
 
+    #
     def get_UE_ID(self,imsi):
         if (type(imsi) == str):
             imsi = int(imsi)
 
         return imsi % self.modulo
-
-        # 36.304 subclause 7.1
-        #if (self._rat == paging.LTEM or (self._rat == paging.NBIOT and self.maxPagingCarriers > 0)):
-        #    self._UE_ID = imsi % 16384
-        #else:
-        #    self._UE_ID = imsi % 4096
-        #return self.UE_ID
-
 
     # See 36.304 subclause 7.2 and Annex B
     def get_UE_ID_H(self,s_tmsi):
@@ -95,35 +93,41 @@ class paging(object):
 
         return ((Y1 ^ Y2) ^ 0xffffffff)
 
+    # Check if there is a PO in this SFN. If yes return both PO and PF.
     def gotpaged_DRX(self,imsi,SFN):
         UE_ID = self.get_UE_ID(imsi)
         # 
-        i_s = (UE_ID / self.N) % self.Ns
+        i_s = m.floor((UE_ID / self.N)) % self.Ns
         PO  = self.sf_pattern[self.Ns>>1][i_s]
-        PF  = (self.T / self.N) * (UE_ID % self.N)
-        #print "UE_ID {}, PF {}, PO {}, (self.T / self.N) {}, (UE_ID % self.N) {}".format(UE_ID,PF,PO,self.T/self.N,UE_ID%self.N)
+        PF  = int((self.T / self.N)) * (UE_ID % self.N)
+
+        if (self.debug):
+            print(f"SFN: {SFN}, UE_ID: {UE_ID:#06x}, PF: {PF}, i_s: {i_s}, PO: {PO}, "
+                f"(T div N): {int(self.T/self.N)}, (UE_ID mod N): {UE_ID % self.N}") 
+        
         return ((SFN % self.T) == PF),PF,PO
 
+    #
     def gotpaged_eDRX(self,s_tmsi,HSFN):
         #
         if (type(s_tmsi) == str):
             s_tmsi = int(s_tmsi)
 
-        #TeDRXH = self.TeDRX / 1024
         TeDRXH = self.TeDRX >> 10
 
-        # 36.304 subclause 7.3
-        # UE_ID_H is 12 most significant bits, if P-RNTI is monitored on NPDCCH -> shift 20
-        # UE_ID_H is 10 most significant bits, if P-RNTI is monitored on (M=PDCCH -> shift 22
+        # 36.304 subclause 7.3:
+        #   UE_ID_H is 12 most significant bits, if P-RNTI is monitored on NPDCCH -> shift 20
+        #   UE_ID_H is 10 most significant bits, if P-RNTI is monitored on (M=PDCCH -> shift 22
         #
         UE_ID_H = self.get_UE_ID_H(s_tmsi) >> self.shift
 
-        ieDRX = (UE_ID_H / TeDRXH) % 4
+        ieDRX = m.floor((UE_ID_H / TeDRXH)) % 4
         PTW_start = 256 * ieDRX
+        # L is already *100
         PTW_end = (PTW_start + self.L - 1) % 1024
-
         #print "** UE_ID_H {}, ieDRX {}, (HSFN % self.T) {}, (UE_ID_H % self.T) {}".format(UE_ID_H,ieDRX, (HSFN % T), (UE_ID_H % T))
 
+        # PH is H-SFN when H-SFN mod TeDRX,H= (UE_ID_H mod TeDRX,H) 
         return ((HSFN % TeDRXH) == (UE_ID_H % TeDRXH)),PTW_start,PTW_end,(HSFN % TeDRXH),(UE_ID_H % TeDRXH)
 
     def get_timeout(self):
@@ -144,11 +148,13 @@ class pagingLTEM(paging):
         else:
             sf_pattern = sf_pattern_mpdcch_14_or_3MHz_fdd
 
-    def configure(self,sib1,sib2,drxie=None,edrxie=None):
+    def configure(self,sib2,drxie=None,edrxie=None):
         # get default paging cycle from SIB2
-        T  = sib2.radioResourceConfigCommon_r13.pcch_Config_r13.defaultPagingCycle_r13
-        nB = sib2.radioResourceConfigCommon_r13.pcch_Config_r13.nB_r13
+        T  = sib2.radioResourceConfigCommon.pcch_Config.defaultPagingCycle
+        nB = sib2.radioResourceConfigCommon.pcch_Config.nB
         TeDRX = 0
+
+        sf_pattern = sf_pattern_npdcch_or_mpdcch_gt_3MHz_fdd
 
         # If upper layer provided eDRX parameters configure based on those
         if (edrxie and hasattr(edrxie,"TeDRX")):
@@ -158,27 +164,17 @@ class pagingLTEM(paging):
             # paging window and then use subclause 7.1 algorithm to find the PO
             if (edrxie.TeDRX < 1024):
                 T = edrxie.TeDRX
+                L = 0
             else:
                 TeDRX = edrxie.TeDRX
                 L = edrxie.PTW
 
-        super(pagingNB,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,L)
+        super(pagingLTEM,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,22,L)
 
     #
-    #
-    #
-    #
-    #
-    #
-    #
-    #
-    #
-
-
-
 
     def paging_PNB(self,UE_ID,imsi):
-        return (UE_ID / (self.N * self.Ns)) % self.Nn
+        return m.floor((UE_ID / (self.N * self.Ns))) % self.Nn
 
 
 class pagingNB(paging):
@@ -253,10 +249,6 @@ class pagingNB(paging):
             else:
                 TeDRX = edrxie.TeDRX
                 L = edrxie.PTW
-
-        #print "Modulo {}, L {}".format(modulo,L)
-
-        print "-->",TeDRX
 
         super(pagingNB,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,20,L)
         return self.TeDRX > 0
