@@ -95,16 +95,19 @@ ptw_m1 = {
 #
 
 class NAS(object):
-    def __init__(self,rel=13):
+    def __init__(self,rel,debug=False):
         self.rel = rel
-        pass
+        self.debug = debug
+
+        if (rel < 13 or rel > 14):
+            raise NotImplementedError(f"3GPP Release-{rel} paging supported")
 
 
 
 
 #
 class extendedDRXparametersIE(NAS):
-    def __init__(self,ptw,edrx,nbiot=True,rel=13):
+    def __init__(self,ptw,edrx,nbiot=False,rel=13,debug=False):
         self.PTW = 0
         self.TeDRX = 0
         
@@ -118,18 +121,21 @@ class extendedDRXparametersIE(NAS):
         if (ptw in local_ptw):
             self.PTW = local_ptw[ptw]
 
-        if (edrx in local_drx):
+        if (edrx and edrx in local_drx):
             self.TeDRX=local_drx[edrx]
+        else:
+            raise ValueError(f"Invalid extended DRX value '{edrx}'")
+            
 
-        super(extendedDRXparametersIE,self).__init__(rel)
+        super(extendedDRXparametersIE,self).__init__(rel,debug)
 
 
 #
 class DRXparametersIE(NAS):
-    def __init__(self,drx,nbiot=True,rel=13):
-        if (drx in tdrx):
+    def __init__(self,drx,rel=13,debug=False):
+        if (drx and drx in tdrx):
             self.DRX = tdrx[drx]
         else:
-            self.DRX = 0
+            raise ValueError(f"Invalid DRX value '{drx}'")
        
-        super(DRXparametersIE,self).__init__(rel)
+        super(DRXparametersIE,self).__init__(rel,debug)

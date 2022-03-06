@@ -3,26 +3,26 @@
 #
 #
 
-maxNPRACH_Resources_NB_r13 = 3
-maxNonAnchorCarriers_NB_r14 = 16
-maxAvailNarrowBands_r14 = 16
+maxNPRACH_Resources_NB_r13 =    3
+maxNonAnchorCarriers_NB_r14 =   16
+maxAvailNarrowBands_r14 =       16
 
 #
 # in units of radio frames
-ENUM_NB_defaultPagingCycle_r13 = (128, 256, 512, 1024)
-ENUM_LTEM_defaultPagingCycle = (32, 64, 128, 256)
+ENUM_NB_defaultPagingCycle_r13 =    (128, 256, 512, 1024)
+ENUM_LTEM_defaultPagingCycle =      (32, 64, 128, 256)
 
 #
 ENUM_nB_r13 = (
     4.0, 2.0, 1.0, 1.0/2, 1.0/4, 1.0/8, 1.0/16, 1.0/32, 1.0/64, 1.0/128,
-    1.0/256, 1.0/512, 1.0/1024, 0, 0, 0)
+    1.0/256, 1.0/512, 1.0/1024, 0, 0, None)
 ENUM_npdcch_NumRepetitionPaging_r13 = (
     1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 0, 0, 0, 0)
 ENUM_npdcch_NumRepetitionPaging_r14 = (
     1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 0, 0, 0, 0)
 ENUM_PagingWeight_NB_r14 = (
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)   #
-ENUM_mpdcch_NumRepetition_Paging_r13 = (
+ENUM_mpdcch_NumRepetitionPaging_r13 = (
     1, 2, 4, 8, 16, 32, 64, 128, 256)
 nrep = (
     "r1", "r2", "r4", "r8", "r16", "r32", "r64", "r128", "r256")
@@ -35,10 +35,10 @@ ENUM_mpdcch_NumRepetition_Paging_str =  (
 
 # Helper functions
 
-def numrepetition_paging_to_index(s,NBIOT=True):
+def numrepetition_paging_to_index(s,LTEM=True):
     if (s is None):
         return None
-    if (NBIOT):
+    if (not LTEM):
         tab = ENUM_npdcch_NumRepetitionPaging_str
     else:
         tab = ENUM_mpdcch_NumRepetition_Paging_str
@@ -65,52 +65,59 @@ def pagingWeight_r14_to_index(s):
 def NB_defaultPagingCycle_r13_to_index(s):
     cyc = ("rf128", "rf256", "rf512", "rf1024")
 
-    if (s is None):
-        return None
-
-    if (s in cyc):
+    if (s and s in cyc):
         return cyc.index(s)
     else:
-        return None
+        raise ValueError(f"Invalid default paging cycle '{s}'")
 
 def defaultPagingCycle_r13_to_index(s):
     cyc = ("rf32", "r64", "rf128", "rf256")
 
-    if (s is None):
-        return None
-
-    if (s in cyc):
+    if (s and s in cyc):
         return cyc.index(s)
     else:
-        return None
+        return ValueError(f"Invalid nB value '{s}'")
 
-def nB_r13_to_index(s):
-    nb = (  "fourT", "twoT", "oneT", "halfT", "quarterT", "one8thT",
-            "one16thT", "one32ndT", "one64thT",
-            "one128thT", "one256thT", "one512thT", "one1024thT") 
+def NB_nB_r13_to_index(s):
+    nb = (  "fourT", "twoT", "oneT", "halfT", "quarterT", "one8thT", "one16thT", "one32ndT",
+            "one64thT", "one128thT", "one256thT", "one512thT", "one1024thT") 
     
-    if (s is None):
-        return None
-
-    if (s in nb):
+    if (s and s in nb):
         return nb.index(s)
     else:
-        return None
+        raise ValueError(f"Invalid nB value '{s}'")
 
+def nB_r13_to_index(s,v1310=False):
+    nb =        ("fourT", "twoT", "oneT", "halfT", "quarterT", "one8thT", "one16thT", "one32ndT")
+    nb_v1310 =  ("one64thT", "one128thT", "one256thT")
+    
+    if (s is None):
+        if (v1310):
+            return -1
+        else:
+            raise ValueError("No nB value defined.")
 
-
-
+    if (v1310):
+        if (s in nb_v1310):
+            return nb_v1310.index(s)+nb.__len__()
+        else:
+            raise ValueError(f"Invalid nB-v1310 value '{s}'")
+    else:
+        if (s in nb):
+            return nb.index(s)
+        else:
+            raise ValueError(f"Invalid nB value '{s}'")
 
 
 # R13
 class PCCH_Config_NB_r13(object):
     def __init__(self, T, nB, rep ):
         T = NB_defaultPagingCycle_r13_to_index(T)
-        nB = nB_r13_to_index(nB)
+        nB = NB_nB_r13_to_index(nB)
         rep = numrepetition_paging_to_index(rep)
         
         self.defaultPagingCycle_r13 = ENUM_NB_defaultPagingCycle_r13[T]
-        self.nB_r13 = int(self.defaultPagingCycle_r13 * ENUM_nB_r13[nB])
+        self.nB_r13 = ENUM_nB_r13[nB]
         self.npdcch_NumRepetitionPaging_r13 = ENUM_npdcch_NumRepetitionPaging_r13[rep]
 
 
@@ -151,15 +158,10 @@ class PCCH_Config(object):
 
 class PCCH_Config_v1310(object):
     def __init__(self,narrowbands,mpdcch_numreppag,nB=None):
-        T = NB_defaultPagingCycle_r13_to_index(T)
-        rep = numrepetition_paging_to_index(rep)
-        self.defaultPagingCycle_r13 = ENUM_NB_defaultPagingCycle_r13[T]
+        rep = numrepetition_paging_to_index(mpdcch_numreppag)
         self.mpdcch_NumRepetitionPaging_r13 = ENUM_mpdcch_NumRepetitionPaging_r13[rep]
-        
-        if (nB is not None):
-            self.nB_v1310 = ENUM_nB_r13[nB_r13_to_index(nB)]
-        else:
-            self.nB_v1310 = None
+        self.paging_narrowBands_r13 = narrowbands
+        self.nB_v1310 = ENUM_nB_r13[nB_r13_to_index(nB,True)]
 
 
 class RadioResourceConfigCommonSIB(object):
@@ -169,8 +171,8 @@ class RadioResourceConfigCommonSIB(object):
 
 
 class SystemInformationBlockType2(object):
-    def __init__(self,rad,**kwargs):
-        self.radioResourceConfigCommon = rad
+    def __init__(self,radioresourceconfigcommonsib,**kwargs):
+        self.radioResourceConfigCommon = radioresourceconfigcommonsib
 
 
 

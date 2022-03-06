@@ -1,51 +1,142 @@
-
+#
+# (c) 2021-2022 Jouni korhonen
+#
+import argparse
 import paging
 import rrcconfig as rrc
 import nasconfig as nas
-#import exceptions
 
+#
+prs = argparse.ArgumentParser()
+prs.add_argument("--nb-iot","-n",dest="rat_nbiot",action="store_true",default=False,
+    help="Set NB-IOT mode. Defaults to LTE-M.")
+prs.add_argument("--rel","-R",dest="rel",action="store",default=13,type=int,
+    help="Set 3GPP Release. Defaults to Rel-13.")
+prs.add_argument("--debug","-d",dest="debug",action="store_true",default=False,
+    help="Enable debug information.")
+prs.add_argument("--numrep","-r",dest="numrep",action="store",default="r1",type=str,
+    help="Set MPDDCH or NPDCCH NumRepetitionPaging. Defaults to 'r1'.")
 
+prs.add_argument("--drx","-D",dest="drx",action="store",type=str,default="rf256",
+    help="Set UE specific I-DRX cycle in binary or SFNs. Defaults to 'rf256'")
 
+grp_edrx = prs.add_argument_group("Extended DRX","Extended DRX required configurations")
+
+grp_edrx.add_argument("--edrx","-E",dest="edrx",action="store",type=str,default=None,
+    help="Set UE specific I-eDRX cycle in binary or SFNs. Default no I-eDRX.")
+
+grp_edrx.add_argument("--ptw","-p",dest="PTW",action="store",type=str,default="256",
+    help="Set PTW in binary or SFNs. Defaults to '256'.")
+
+grp_edrx.add_argument("--s-tmsi","-s",dest="s_tmsi",type=int,default=None,
+    help="Set S-TMSI for the UE. Required in case of I-eDRX.")
+
+# UE specific DRX cycles
+prs.add_argument("--ue-drx","-u",dest="uedrx",type=str,default=None,
+    help="Set UE specific DRX cycle in binary or SFNs. Valid for LTE-M.")
+
+prs.add_argument("--imsi","-i",dest="imsi",type=int,action="store",
+    required=True,help="Set UE IMSI.")
+#
+prs.add_argument("--nB","-b",dest="nB",action="store",type=str,default="oneT",
+    help="nB value, see 36.331 PCCH-Config. Defaults to 'oneT'.")
+prs.add_argument("--nB-v1310",dest="nB_v1310",action="store",type=str,default=None,
+    help="nB value, see 36.331 PCCH-Config-v1310. Defaults to None.")
+prs.add_argument("--PNB","-P",dest="PNB",action="store",type=int,default=1,
+    help="Number of LTE-M paging narrow bands. Defaults to 1.")
+# to be NB-IOT R14 non-anchor paging
+#prs.add_argument("--non_anchor","-n","")
+
+args = prs.parse_args()
+
+#
 if (__name__ == "__main__"):
-    nonanchors = rrc.DL_ConfigCommonList_NB_r14([
-        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w1","r32")),
-        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w2","r64")),
-        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w1","r128")),
-        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w3","r1024")),
-        rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w4"))
-    ])
-    sib22 = rrc.SystemInformationBlockType22_NB_r14(dl_ConfigList_r14=nonanchors,
+    
+    # if debug dump command line parameters.. including default values
+    if (args.debug):
+        print("Current configuration:")
+        print(f"  3GPP Release-{args.rel} {'NB-IOT' if args.rat_nbiot else 'LTE-M'}")
+        print(f"  UE IMSI:                       {args.imsi}")
+
+        if (args.s_tmsi):
+            print(f"  UE S-TMSI:                     {args.s_tmsi}")
+
+        if (not args.rat_nbiot):
+            print(f"  Number of paging narrowbands:  {args.PNB}")
+ 
+        print(f"  Default paging cycle:          {args.drx}")
+        
+        if (args.edrx):
+            print(f"  Default extended paging cycle: {args.edrx[0]}")
+            print(f"  Default paging time window:    {args.edrx[1]}")
+
+        print(f"  nB:                            {args.nB}")
+
+        if (args.nB_v1310 is not None):
+            print(f"  nB-v1310:                      {args.nB_v1310}");
+
+        if (not args.rat_nbiot):
+            # For NB-IOT UE specific DRX cycles come after R14
+            if (args.uedrx is not None):
+                print(f"  UE specific DRX cycles:          {args.uedrx}")
+
+        print(f"  Number of paging repetitions:  {args.numrep}")
+
+    # Build configurations.. and check for NB-IOT
+    if (args.rat_nbiot):
+        sib22 = None
+
+        # Check for non-anchor paging carriers and configurations
+        if (args.rel > 13):
+            nonanchors = rrc.DL_ConfigCommonList_NB_r14([
+                rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w1","r32")),
+                rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w2","r64")),
+                rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w1","r128")),
+                rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w3","r1024")),
+                rrc.DL_ConfigCommon_NB_r14(None,pcch_Config_r14=rrc.PCCH_Config_NB_r14("w4"))
+            ])
+            sib22 = rrc.SystemInformationBlockType22_NB_r14(dl_ConfigList_r14=nonanchors,
                                                     pagingWeightAnchor_r14="w2")
 
-    print("** sib22 **")
-    print(sib22.pagingWeightAnchor_r14)
-    print(sib22.dl_ConfigList_r14[0].pcch_Config_r14.npdcch_NumRepetitionPaging_r14)
-    print(sib22.dl_ConfigList_r14[0].pcch_Config_r14.pagingWeight_r14)
-    print(sib22.dl_ConfigList_r14[2].pcch_Config_r14.npdcch_NumRepetitionPaging_r14)
-    print(sib22.dl_ConfigList_r14[2].pcch_Config_r14.pagingWeight_r14)
-    print(sib22.dl_ConfigList_r14[4].pcch_Config_r14.pagingWeight_r14)
+            print("** sib22 **")
+            print(sib22.pagingWeightAnchor_r14)
+            print(sib22.dl_ConfigList_r14[0].pcch_Config_r14.npdcch_NumRepetitionPaging_r14)
+            print(sib22.dl_ConfigList_r14[0].pcch_Config_r14.pagingWeight_r14)
+            print(sib22.dl_ConfigList_r14[2].pcch_Config_r14.npdcch_NumRepetitionPaging_r14)
+            print(sib22.dl_ConfigList_r14[2].pcch_Config_r14.pagingWeight_r14)
+            print(sib22.dl_ConfigList_r14[4].pcch_Config_r14.pagingWeight_r14)
 
-    pcchcfg = rrc.PCCH_Config_NB_r13("rf512","halfT","r32")
-    radcfg = rrc.RadioResourceConfigCommonSIB_NB_r13(pcchcfg)
-    sib2 = rrc.SystemInformationBlockType2_NB_r13(radcfg)
-    print("Broadcasted DRX values:")
-    print("\tdefault: ",sib2.radioResourceConfigCommon_r13.pcch_Config_r13.defaultPagingCycle_r13)
-    print("\tnB: ",sib2.radioResourceConfigCommon_r13.pcch_Config_r13.nB_r13)
-    print("\tnumrep: ",sib2.radioResourceConfigCommon_r13.pcch_Config_r13.npdcch_NumRepetitionPaging_r13)
 
-    #edrx = nas.extendedDRXparametersIE(0b0001,0b0011)
-    #print "eDRAX values: ",edrx.TeDRX,edrx.PTW
+        pcchcfg = rrc.PCCH_Config_NB_r13(args.drx,args.nB,args.numrep)
+        radcfg = rrc.RadioResourceConfigCommonSIB_NB_r13(pcchcfg)
+        sib2 = rrc.SystemInformationBlockType2_NB_r13(radcfg)
 
-    nb = paging.pagingNB(14)
-    #edrx = nb.configure(sib2,sib22,edrx)
-    edrx = nb.configure(sib2,sib22,None)
-    #edrx = nb.configure(sib2,None,edrx)
-
-    if (edrx):
-        print("UE specific I-eDRX enabled..")
+    # LTE-M configurations
     else:
-        print("Cell specific I-eDRX enabled")
+        # Here's a bit of an issue.. the PCCH_Config nB value 
+        pcchcfg = rrc.PCCH_Config(args.drx,args.nB)
+        pcchcfg_v1310 = rrc.PCCH_Config_v1310(args.PNB,args.numrep,args.nB_v1310)
+        radcfg = rrc.RadioResourceConfigCommonSIB(pcchcfg,pcchcfg_v1310)
+        sib2 = rrc.SystemInformationBlockType2(radcfg)
 
+    # Common configurations: NAS and WUS
+    # NB-IOT UE specific DRX not supported yet
+    if (args.uedrx and not args.rat_nbiot):
+       drx_ie = nas.DRXparametersIE(args.uedrx,args.rel,args.debug)
+    else:
+        drx_ie = None
+
+    if (args.edrx):
+        edrx_ie = nas.extendedDRXparametersIE(args.edrx[1],args.edrx[0],args.rat_nbiot,args.rel,args.debug) 
+    else:
+        edrx_ie = None
+
+
+    # Create paging objects
+    if (args.rat_nbiot):
+        pass
+    else:
+        pass
 
     #
     # Check for paging..
@@ -72,56 +163,5 @@ if (__name__ == "__main__"):
     inPH = False
     PTWstart = sfn
     PTWend = sfn
-
-    for n in range(1024):
-    #for n in range(1024*1024):
-    #for n in range(nb.TeDRX):
-
-        if (edrx is True):
-            if (not inPH):
-                ph,s,e,phmod,uemod = nb.gotpaged_eDRX(s_tmsi,hsfn)
-
-                if (ph is True):
-                    inPH = True
-                    PTWstart = s
-                    PTWend = e
-                    print("PH positive: H-SFN {}, SFN {}, PTW_start {}, PTW_end {}".format(hsfn,sfn,s,e))
-                    print("\tPH modulo would be {} and UE_ID_H is {}".format(phmod,uemod))
-        else:
-            PTWstart = sfn
-            PTWend = sfn
-
-        # Since PTWstart and PTWend are modulo 1024 there are cases where PTWend is less
-        # than PTWstart.. this has to be taken into account when comparing if the SFN is
-        # between PTWstart and PTWend
-
-        if (inPH is True or (not edrx)):
-            p = False
-
-            if (PTWstart > PTWend):
-                if (sfn >= PTWstart and sfn >= PTWend):
-                    p, pf, po = nb.gotpaged_DRX(imsi, sfn)
-            else:
-                if (sfn >= PTWstart and sfn <= PTWend):
-                    p, pf, po = nb.gotpaged_DRX(imsi, sfn)
-
-            if (p):
-                print("Paging positive: H-SFN {}, SFN {}, PF {}, PO {}".format(hsfn,sfn,pf,po))
-                inPH = False
-                # Fast forward SFN when we found SF & PO for this example purposes.. 36.304 subclause 7.2 states:
-                # "Otherwise, a UE configured with eDRX monitors POs as defined in 7.1 (i.e, based on the upper
-                # layer configured DRX value and a default DRX value determined in 7.1), during a periodic Paging
-                # Time Window (PTW) configured for the UE or until a paging message including the UE's NAS identity
-                # is received for the UE during the PTW, whichever is earlier."
-                sfn = 1023
-
-        sfn += 1
-
-        if (sfn >= 1024):
-            inPH = False
-            hsfn += 1
-            sfn &= 1023
-            hsfn &= 1023
-
 
 
