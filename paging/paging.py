@@ -27,7 +27,7 @@ sf_pattern_mpdcch_14_or_3MHz_fdd = (
 #
 
 class paging(object):
-    SYSTEM_BW_1_3 = 0
+    SYSTEM_BW_1_4 = 0
     SYSTEM_BW_3   = 1
     SYSTEM_BW_5   = 2
     SYSTEM_BW_10  = 3
@@ -54,11 +54,15 @@ class paging(object):
         self.TeDRX = TeDRX
         self.nB = nB
 
+        # Sanity check with eDRX parameters
+        if (L > TeDRX):
+            raise ValueError(f"Extended DRX cycle less or equal than PTW.") 
+
         # This code does not take into account the "fractional N" cases. 
         self.N  = min(T,nB)
 
         #
-        self.Ns = max(1,nB/T)
+        self.Ns = int(max(1,nB/T))
         self.sf_pattern = sf_pattern
         self.modulo = modulo
         self.shift = shift
@@ -70,7 +74,7 @@ class paging(object):
     # The algorithm is described in more detail in 36.304 Annex B
     def mod2div_(self,N,D):
         D <<= 31
-        for i in xrange(32):
+        for i in range(32):
             if ((N & D) & 0x8000000000000000):
                 N ^= D
             N <<= 1
@@ -123,7 +127,7 @@ class paging(object):
     #  pagehit   - boolean if there is a potential PO in this HSFN
     #  PTW_start - start SFN for the PTW
     #  PTW_end   - end SFN % 1000 for the PTW
-    #  PTW_len   - lenght of the PTW in SFNs
+    #  L         - lenght of the PTW in SFNs
     #
     def gotpaged_eDRX(self,s_tmsi,HSFN):
         # extended DRX not in use
@@ -140,7 +144,8 @@ class paging(object):
         #   UE_ID_H is 12 most significant bits, if P-RNTI is monitored on NPDCCH -> shift 20
         #   UE_ID_H is 10 most significant bits, if P-RNTI is monitored on (M=PDCCH -> shift 22
         #
-        UE_ID_H = self.get_UE_ID_H(s_tmsi) >> self.shift
+        UE_ID_H_noshift = self.get_UE_ID_H(s_tmsi)
+        UE_ID_H = UE_ID_H_noshift >> self.shift
 
         ieDRX = m.floor((UE_ID_H / TeDRXH)) % 4
         PTW_start = 256 * ieDRX
@@ -148,7 +153,12 @@ class paging(object):
         PTW_end = (PTW_start + self.L - 1) % 1024
         
         if (self.debug):
-            print(f"** UE_ID_H {UE_ID_H}, ieDRX {ieDRX}, (HSFN % self.T) {HSFN % T}, (UE_ID_H % self.T) {UE_ID_H % T}")
+            print(  f"In paging.gotpaged_eDRX()")
+            print(  f"  HSFN = {HSFN} s_tmsi = {s_tmsi:#010x}")
+            print(  f"  UE_ID_H_noshift = {UE_ID_H_noshift:#010x}, UE_ID_H = {UE_ID_H:#04x}")
+            print(  f"  TeDRX>>10 (TeDRXH) = {TeDRXH}, ieDRX = {ieDRX}")
+            print(  f"  PTW_start = {PTW_start}, PTW_end = {PTW_end}, L (PTW*100) = {self.L}")
+            print(  f"  (HSFN % TeDRXH) = {HSFN % TeDRXH}, (UE_ID_H % TeDRXH) = {UE_ID_H % TeDRXH}")
 
         # PH is H-SFN when H-SFN mod TeDRX,H= (UE_ID_H mod TeDRX,H) 
         return ((HSFN % TeDRXH) == (UE_ID_H % TeDRXH)),PTW_start,PTW_end,self.L
@@ -158,18 +168,23 @@ class paging(object):
 
 # LTE-M
 class pagingLTEM(paging):
-    def __init__(self,sysbw=paging.SYSTEM_BW_5,rel=13):
+    def __init__(self,sysbw=paging.SYSTEM_BW_5,rel=13,debug=False):
         # This mimics SIB1-BR eDRX-Allowed-r13 flag
         #
         # See 36.304 subclause 7.2 for system bw and RAT based
         # table selections.
         #
-        super (pagingLTEM,self).__init__(rel)
+        super (pagingLTEM,self).__init__(rel,debug)
 
         if (sysbw > paging.SYSTEM_BW_3):
-            sf_pattern = sf_pattern_npdcch_or_mpdcch_gt_3MHz_fdd
+            self.sf_pattern = sf_pattern_npdcch_or_mpdcch_gt_3MHz_fdd
         else:
-            sf_pattern = sf_pattern_mpdcch_14_or_3MHz_fdd
+            self.sf_pattern = sf_pattern_mpdcch_14_or_3MHz_fdd
+
+        if (debug):
+            print(  f"In pagingLTEM.__init__()\n"
+                    f"  Release = {rel}\n"
+                    f"  sysbw   = {sysbw}")
 
     #
     #
@@ -177,6 +192,9 @@ class pagingLTEM(paging):
         # get default paging cycle from SIB2
         T  = sib2.radioResourceConfigCommon.pcch_Config.defaultPagingCycle
         TeDRX = 0
+        sf_pattern = self.sf_pattern
+        modulo = 16384
+        L = 0
 
         # If upper layer provided eDRX parameters configure based on those
         if (edrxie and hasattr(edrxie,"TeDRX")):
@@ -187,7 +205,6 @@ class pagingLTEM(paging):
             if (edrxie.TeDRX < 1024):
                 T = edrxie.TeDRX
                 TeDRX = 0
-                L = 0
             else:
                 TeDRX = edrxie.TeDRX
                 L = edrxie.PTW
@@ -195,7 +212,6 @@ class pagingLTEM(paging):
         # If upper layer provided UE specific DRX parameter configuration..
         if (drxie and hasattr(edrxie,"DRX")):
             T = drxie.DRX
-            L = 0
             TeDRX = 0
 
         # Precalculate nB
@@ -205,14 +221,21 @@ class pagingLTEM(paging):
             nB = int(T * sib2.radioResourceConfigCommon.pcch_Config.nB)
 
         # Paging narrow bands.
-        self.Nn = sib2.radioResourceConfigCommon.pcch_Config_v1310.self.paging_narrowBands_r13
+        self.Nn = sib2.radioResourceConfigCommon.pcch_Config_v1310.paging_narrowBands_r13
+
+        if (self.debug):
+            print(  f"In pagingLTEM.configure()\n"
+                    f"  T = {T}, Nb = {nB}, Nn = {self.Nn}\n"
+                    f"  TeDRX = {TeDRX}, L (PTW*100) = {L}\n"
+                    f"  modulo = {modulo}, shift = {22}\n")
 
         # setup common parameters
         super(pagingLTEM,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,22,L)
 
     #
 
-    def paging_carrier(self,UE_ID,imsi):
+    def paging_carrier(self,imsi):
+        UE_ID = self.get_UE_ID(imsi)
         return m.floor((UE_ID / (self.N * self.Ns))) % self.Nn
 
 
@@ -283,9 +306,7 @@ class pagingNB(paging):
             # 36.304 subclause 7.1 algorithm using T = 512
             # Otherwise use subclause 7.3 algorithm to find the start of the
             # paging window and then use subclause 7.1 algorithm to find the PO
-            if (edrxie.TeDRX < 1024):
-                T = edrxie.TeDRX
-            else:
+            if (edrxie.TeDRX > 1024):
                 TeDRX = edrxie.TeDRX
                 L = edrxie.PTW
 
