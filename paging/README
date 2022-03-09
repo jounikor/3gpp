@@ -2,8 +2,8 @@ This Python3 project is for calculating LTE-M and NB-IOT Paging Occasions.
 Currently it supports 3GPP Release-13, and both DRX and Extended DRX.
 
 ToDO:
-* 3GPP Release-14 NB-IOT non-anchor paging support. Basic framework already started.
 * 3GPP Release-15 WUS.
+* NB-IOT UE specific DRX.
 
 usage: test.py [-h] [--nb-iot] [--rel REL] [--debug] [--verbose] [--numrep NUMREP] [--drx DRX] [--edrx EDRX] [--ptw PTW] [--s-tmsi S_TMSI]
                [--num-hsfn NUM_HSFN] [--ue-drx UEDRX] [--imsi IMSI] [--nB NB] [--nB-v1310 NB_V1310] [--pnb PNB] [--system-bw SYSTEM_BW]
