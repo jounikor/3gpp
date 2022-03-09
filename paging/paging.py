@@ -244,6 +244,7 @@ class pagingNB(paging):
         super (pagingNB,self).__init__(rel,debug)
         self.rel = rel
         self.debug = debug
+        self.sf_pattern = sf_pattern_npdcch_or_mpdcch_gt_3MHz_fdd
         #
         # See 36.304 subclause 7.2 for system bw and RAT based
         # table selections.
@@ -251,7 +252,7 @@ class pagingNB(paging):
 
 
     def configure(self,sib2,sib22=None,edrxie=None):
-        sf_pattern = sf_pattern_npdcch_or_mpdcch_gt_3MHz_fdd
+        sf_pattern = self.sf_pattern
         modulo = 4096
         self.TeDRX = 0
         L = 0

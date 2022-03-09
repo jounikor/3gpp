@@ -85,7 +85,7 @@ if (__name__ == "__main__"):
 
         print(f"  nB:                            {args.nB}")
 
-        if (args.nB_v1310 is not None):
+        if (not args.rat_nbiot and args.nB_v1310 is not None):
             print(f"  nB-v1310:                      {args.nB_v1310}");
 
         if (not args.rat_nbiot):
