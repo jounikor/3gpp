@@ -32,6 +32,8 @@ grp_edrx.add_argument("--ptw",dest="ptw",action="store",type=str,default="256",
 
 grp_edrx.add_argument("--s-tmsi",dest="s_tmsi",type=int,default=0x12341234,
     help="Set S-TMSI for the UE. Required in case of I-eDRX. Defaults to 0x12341234.")
+grp_edrx.add_argument("--num-hsfn",dest="num_hsfn",default=1,action="store",type=int,
+    help="Number of H-SFNs to run simulation. Defaults to 1.")
 
 # UE specific DRX cycles
 prs.add_argument("--ue-drx",dest="uedrx",type=str,default=None,
@@ -50,8 +52,6 @@ prs.add_argument("--pnb",dest="PNB",action="store",type=int,default=1,
 prs.add_argument("--system-bw",dest="system_bw",default=10,action="store",type=float,
     help="LTE-M system bandwidth in MHz (1.4, 3, 5, 10, 15 or 20). Defaults to 10.")
 
-prs.add_argument("--num-hsfn",dest="num_hsfn",default=1,action="store",type=int,
-    help="Number of H-SFNs to run simulation. Defaults to 1.")
 
 
 
