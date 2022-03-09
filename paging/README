@@ -1,0 +1,34 @@
+This Python3 project is for calculating LTE-M and NB-IOT Paging Occasions.
+Currently it supports 3GPP Release-13, and both DRX and Extended DRX.
+
+ToDO:
+* 3GPP Release-14 NB-IOT non-anchor paging support. Basic framework already started.
+* 3GPP Release-15 WUS.
+
+usage: test.py [-h] [--nb-iot] [--rel REL] [--debug] [--verbose] [--numrep NUMREP] [--drx DRX] [--edrx EDRX] [--ptw PTW] [--s-tmsi S_TMSI]
+               [--num-hsfn NUM_HSFN] [--ue-drx UEDRX] [--imsi IMSI] [--nB NB] [--nB-v1310 NB_V1310] [--pnb PNB] [--system-bw SYSTEM_BW]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --nb-iot              Set NB-IOT mode. Defaults to LTE-M.
+  --rel REL             Set 3GPP Release. Defaults to Rel-13.
+  --debug               Enable debug information.
+  --verbose             Enable verbose output.
+  --numrep NUMREP       Set MPDDCH or NPDCCH NumRepetitionPaging. Defaults to 'r1'.
+  --drx DRX             Set UE specific I-DRX cycle in binary or SFNs. Defaults to 'rf256'
+  --ue-drx UEDRX        Set UE specific DRX cycle in binary or SFNs. Valid for LTE-M.
+  --imsi IMSI           Set UE IMSI. Defaults to 123456789012345.
+  --nB NB               nB value, see 36.331 PCCH-Config. Defaults to 'oneT'.
+  --nB-v1310 NB_V1310   nB value, see 36.331 PCCH-Config-v1310. Defaults to None.
+  --pnb PNB             Number of LTE-M paging narrow bands. Defaults to 1.
+  --system-bw SYSTEM_BW
+                        LTE-M system bandwidth in MHz (1.4, 3, 5, 10, 15 or 20). Defaults to 10.
+
+Extended DRX:
+  Extended DRX required configurations
+
+  --edrx EDRX           Set UE specific I-eDRX cycle in binary or SFNs. Default no I-eDRX.
+  --ptw PTW             Set PTW in binary or SFNs. Defaults to '256'.
+  --s-tmsi S_TMSI       Set S-TMSI for the UE. Required in case of I-eDRX. Defaults to 0x12341234.
+  --num-hsfn NUM_HSFN   Number of H-SFNs to run simulation. Defaults to 1.
+
