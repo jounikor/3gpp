@@ -184,11 +184,12 @@ if (__name__ == "__main__"):
         sfn  = sfn_count % 1024
 
         # Check if we are inside the Paging Hyperframe
-        if (sfn % 1024 == 0 and args.verbose):
-            print( "START-OF-HYPER-FRAME-------------------------------")
-            
+        if (sfn % 1024 == 0):
             ph,PTW_sta,PTW_end,PTW_len = pg.gotpaged_eDRX(args.s_tmsi,hsfn)
-
+        
+            if (args.verbose):
+                print( "START-OF-HYPER-FRAME-------------------------------")
+            
         # Check if we need are inside the PTW
         if (ph and not inside_PTW):
             # Case 1: PTW_sta < PTW_end
