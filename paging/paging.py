@@ -294,6 +294,8 @@ class pagingNB(paging):
 
             self.Nn += n
 
+            print(f"*** self.Nn = {self.Nn}, self.Wall = {self.Wall}")
+
             # If P-RNTI is monitored on NPDCCH and UE supports paging on a non-anchor
             # carrier then UE_ID = IMSI mod 16384
             modulo = 16384
@@ -330,8 +332,8 @@ class pagingNB(paging):
         UE_ID = self.get_UE_ID(imsi)
 
         # wmod = floor(UE_ID/(self.N*self.Ns)) mod W
-        wmod = (UE_ID / (self.N*self.Ns)) % self.Wall
-        
+        wmod = m.floor((UE_ID / (self.N*self.Ns))) % self.Wall
+
         while (n <= self.Nn-1 and wmod >= self.W[n]):
             n += 1
 
