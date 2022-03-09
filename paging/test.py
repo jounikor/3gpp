@@ -47,7 +47,7 @@ prs.add_argument("--nB-v1310",dest="nB_v1310",action="store",type=str,default=No
 prs.add_argument("--pnb",dest="PNB",action="store",type=int,default=1,
     help="Number of LTE-M paging narrow bands. Defaults to 1.")
 
-prs.add_argument("--system-bw",dest="system_bw",default=10,action="store",type=int,
+prs.add_argument("--system-bw",dest="system_bw",default=10,action="store",type=float,
     help="LTE-M system bandwidth in MHz (1.4, 3, 5, 10, 15 or 20). Defaults to 10.")
 
 prs.add_argument("--num-hsfn",dest="num_hsfn",default=1,action="store",type=int,

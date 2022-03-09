@@ -27,12 +27,12 @@ sf_pattern_mpdcch_14_or_3MHz_fdd = (
 #
 
 class paging(object):
-    SYSTEM_BW_1_4 = 0
-    SYSTEM_BW_3   = 1
-    SYSTEM_BW_5   = 2
-    SYSTEM_BW_10  = 3
-    SYSTEM_BW_15  = 4
-    SYSTEM_BW_20  = 5
+    SYSTEM_BW_1_4 = 1.4
+    SYSTEM_BW_3   = 3
+    SYSTEM_BW_5   = 5
+    SYSTEM_BW_10  = 10
+    SYSTEM_BW_15  = 15
+    SYSTEM_BW_20  = 20
 
     def __init__(self,rel=13,debug=False):
         self.rel = rel
