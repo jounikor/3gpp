@@ -3,7 +3,8 @@ Currently it supports 3GPP Release-13, and both DRX and Extended DRX.
 
 ToDO:
 * 3GPP Release-15 WUS.
-* NB-IOT UE specific DRX.
+* 3GPP Release-16 NB-IOT UE specific DRX.
+* 3GPP Release-17 NB-IOT coverage based paging carrier selection.
 
 usage: test.py [-h] [--nb-iot] [--rel REL] [--debug] [--verbose] [--numrep NUMREP] [--drx DRX] [--edrx EDRX] [--ptw PTW] [--s-tmsi S_TMSI]
                [--num-hsfn NUM_HSFN] [--ue-drx UEDRX] [--imsi IMSI] [--nB NB] [--nB-v1310 NB_V1310] [--pnb PNB] [--system-bw SYSTEM_BW]
