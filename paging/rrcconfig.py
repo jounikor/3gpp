@@ -20,8 +20,8 @@ ENUM_npdcch_NumRepetitionPaging_r13 = (
     1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 0, 0, 0, 0)
 ENUM_npdcch_NumRepetitionPaging_r14 = (
     1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 0, 0, 0, 0)
-ENUM_PagingWeight_NB_r14 = (
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)   #
+#ENUM_PagingWeight_NB_r14 = (
+#    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)   #
 ENUM_mpdcch_NumRepetitionPaging_r13 = (
     1, 2, 4, 8, 16, 32, 64, 128, 256)
 nrep = (
@@ -48,18 +48,21 @@ def numrepetition_paging_to_index(s,LTEM=True):
     else:
         return None
 
-
+#
+# Returns:
+#  Paging weight -1.. If the weight string is None then -1 is returned
+#  to mean weight of w0. 
+#
 def pagingWeight_r14_to_index(s):
     w = ("w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8",
          "w9", "w10", "w11", "w12", "w13", "w14", "w15", "w16")
 
-    if (s is None):
-        return None
-
     if (s in w):
         return w.index(s)
+    if (s is None):
+        return -1
     else:
-        return None
+        raise ValueError(f"Invalid paging weight '{s}'")
 
 
 def NB_defaultPagingCycle_r13_to_index(s):
@@ -183,14 +186,19 @@ class SystemInformationBlockType2(object):
 # PCCH-Config-NB-r14
 
 class PCCH_Config_NB_r14(object):
-    def __init__(self, pagingweight_nb_r14, npdcch_numrepetitionpaging_r14=None,**kwargs):
-        if (npdcch_numrepetitionpaging_r14 is not None):
-            npdcch_numrepetitionpaging_r14 = numrepetition_paging_to_index(npdcch_numrepetitionpaging_r14)
-            self.npdcch_NumRepetitionPaging_r14 = ENUM_npdcch_NumRepetitionPaging_r14[npdcch_numrepetitionpaging_r14]
+    def __init__(self, pagingWeight_NB_r14, **kwargs):
+        if ("npdcch_NumRepetitionRaging_r14" in kwargs):
+            npdcch_NumRepetitionPaging_r14 = numrepetition_paging_to_index(npdcch_NumRepetitionPaging_r14)+1
+            self.npdcch_NumRepetitionPaging_r14 = ENUM_npdcch_NumRepetitionPaging_r14[npdcch_NumRepetitionPaging_r14]
+        else:
+            self.npdcch_NumRepetitionPaging_r14 = None
 
         # defaults to w1
-        pagingweight_nb_r14 = pagingWeight_r14_to_index(pagingweight_nb_r14)
-        self.pagingWeight_r14 = ENUM_PagingWeight_NB_r14[pagingweight_nb_r14]
+        self.pagingWeight_r14 = pagingWeight_r14_to_index(pagingWeight_NB_r14) + 1
+
+class DL_CarrierConfigCommon_NB_r14(object):
+    def __init__(self,**kwargs):
+        pass
 
 class DL_ConfigCommon_NB_r14(object):
     def __init__(self,dl_CarrierConfig_r14,**kwargs):
@@ -200,11 +208,18 @@ class DL_ConfigCommon_NB_r14(object):
         #  [[  wus-Config-r15       WUS-ConfigPerCarrier-NB-r15     OPTIONAL -- Cond WUS
         #  ]]
 
+        # This IE is not really used..
+        self.dl_CarrierConfig_r14 = dl_CarrierConfig_r14
+
         if ("pcch_Config_r14" in kwargs):
             self.pcch_Config_r14 = kwargs["pcch_Config_r14"]
+        else:
+            self.pcch_Config_r14 = None
 
         if ("wus_Config_r15" in kwargs):
             self.wus_Config_r15 = kwargs["wus_Config_r15"]
+        else:
+            self.wus_Config_r15 = None
 
 
 class DL_ConfigCommonList_NB_r14(object):
@@ -212,6 +227,15 @@ class DL_ConfigCommonList_NB_r14(object):
         #
         # DL-ConfigCommonList-NB-r14 ::= SEQUENCE (SIZE (1.. maxNonAnchorCarriers-NB-r14)) OF
         #                                        DL-ConfigCommon-NB-r14
+
+        if (dl_configcommonlist_nb_r14):
+            if (dl_configcommonlist_nb_r14.__len__() > maxNonAnchorCarriers_NB_r14):
+                raise IndexError(f"DL_ConfigCommonList_NB_r14 too big")
+        
+            # This must be a list or tuple
+            if (type(dl_configcommonlist_nb_r14) != list and
+                type(dl_configcommonlist_nb_r14) != tuple):
+                raise TypeError("dl_configcommonlist_nb_r14 not list or tuple")
 
         self.DL_ConfigCommonList_NB_r14 = dl_configcommonlist_nb_r14
 
@@ -250,13 +274,16 @@ class WUS_Config_NB_r15(object):
 class SystemInformationBlockType22_NB_r14(object):
     def __init__(self,**kwargs):
         if ("dl_ConfigList_r14" in kwargs):
-            self.dl_ConfigList_r14 = kwargs["dl_ConfigList_r14"].DL_ConfigCommonList_NB_r14
+            dl_ConfigList_r14 = kwargs["dl_ConfigList_r14"]
+
+            if (dl_ConfigList_r14):
+                self.dl_ConfigList_r14 = dl_ConfigList_r14.DL_ConfigCommonList_NB_r14
 
         if ("pagingWeightAnchor_r14" in kwargs):
-            pagingweightanchor_r14 = kwargs["pagingWeightAnchor_r14"]
-            pagingweightanchor_r14 = pagingWeight_r14_to_index(pagingweightanchor_r14)
-            self.pagingWeightAnchor_r14 = ENUM_PagingWeight_NB_r14[pagingweightanchor_r14]
+            self.pagingWeightAnchor_r14 = pagingWeight_r14_to_index(kwargs["pagingWeightAnchor_r14"])+1
         else:
+            self.pagingWeightAnchor_r14 = 0
+            
             if (hasattr(self, "dl_ConfigList_r14") == False):
                 raise (RuntimeError("SystemInformationBlockType22_NB_r14.dl_ConfigList_r14 missing"))
 
