@@ -34,9 +34,51 @@ class paging(object):
     SYSTEM_BW_15  = 15
     SYSTEM_BW_20  = 20
 
-    def __init__(self,rel=13,debug=False):
+    #
+    def init_PTW(self,edrx):
+        self.inside_PTW = edrx
+        self.ph = False
+
+    #
+    def configure_PTW(self,PTW_sta=None,PTW_end=None,PTW_len=None):
+        self.PTW_sta = PTW_sta
+        self.PTW_end = PTW_end
+        self.PTW_len = PTW_len
+        self.inside_PTW = True if PTW_sta is None else False
+        self.ph = True
+
+    #
+    def inside_PTW_test(self,sfn):
+        # Check if we need are inside the PTW
+        if (self.ph and not self.inside_PTW):
+            # Case 1: PTW_sta < PTW_end
+            if (self.PTW_sta < self.PTW_end):
+                if (sfn >= self.PTW_sta and sfn <= self.PTW_end):
+                    self.inside_PTW = True
+    
+            # Case 2: PTW_sta > PTW_end i.e. PTW wrapped hyper frame boundary
+            if (self.PTW_sta > self.PTW_end):
+                if (sfn >= self.PTW_end and sfn <= self.PTW_sta):
+                    self.inside_PTW = True
+        #
+        inside_PTW = self.inside_PTW
+        
+        #
+        if (self.inside_PTW and self.ph):
+            self.PTW_len -= 1
+                
+            if (self.PTW_len == 0):
+                self.inside_PTW = False
+                self.ph = False
+
+        #
+        return inside_PTW
+
+    #
+    def __init__(self,rel=13,fractional_nB=False,debug=False):
         self.rel = rel
         self.debug = debug
+        self.fractional_nB = fractional_nB
 
         if (rel < 13 or rel > 14):
             raise NotImplementedError(f"3GPP Release-{rel} paging supportied")
@@ -48,7 +90,7 @@ class paging(object):
     #   and the UE supports paging on a non-anchor carrier, and if paging configuration for
     #   non-anchor carrier is provided in system information. 
     # This class is RAT agnostic thus the caller has to be RAT aware.
-    
+    #
     def setparameters(self,T,TeDRX,nB,sf_pattern,modulo,shift=0,L=0):
         self.T  = T
         self.TeDRX = TeDRX
@@ -58,10 +100,16 @@ class paging(object):
         if (L > TeDRX):
             raise ValueError(f"Extended DRX cycle less or equal than PTW.") 
 
-        # This code does not take into account the "fractional N" cases. 
+        # This code takes into account the "fractional nB" case, which
+        # was discussed in RAN2#105 and 106 meetings with an outcome:
+        # "RAN2 understands that nB value can be fractional".
+        # Here we have two implementation where 0 < N < 1 is possible or
+        # N=1 when nB < 1
         self.N  = min(T,nB)
 
-        #
+        if (self.fractional_nB is False and self.N < 1):
+            self.N = 1
+
         self.Ns = int(max(1,nB/T))
         self.sf_pattern = sf_pattern
         self.modulo = modulo
@@ -105,8 +153,8 @@ class paging(object):
         UE_ID = self.get_UE_ID(imsi)
         # 
         i_s = m.floor((UE_ID / self.N)) % self.Ns
-        PO  = self.sf_pattern[self.Ns>>1][i_s]
-        PF  = int((self.T / self.N)) * (UE_ID % self.N)
+        PO  = int(self.sf_pattern[self.Ns>>1][i_s])
+        PF  = int((self.T / self.N) * (UE_ID % self.N))
 
         if (self.debug):
             print(f"SFN: {SFN}, UE_ID: {UE_ID:#06x}, PF: {PF}, i_s: {i_s}, PO: {PO}, "
@@ -168,13 +216,13 @@ class paging(object):
 
 # LTE-M
 class pagingLTEM(paging):
-    def __init__(self,sysbw=paging.SYSTEM_BW_5,rel=13,debug=False):
+    def __init__(self,sysbw=paging.SYSTEM_BW_5,rel=13,frac=False,debug=False):
         # This mimics SIB1-BR eDRX-Allowed-r13 flag
         #
         # See 36.304 subclause 7.2 for system bw and RAT based
         # table selections.
         #
-        super (pagingLTEM,self).__init__(rel,debug)
+        super (pagingLTEM,self).__init__(rel,frac,debug)
 
         if (sysbw > paging.SYSTEM_BW_3):
             self.sf_pattern = sf_pattern_npdcch_or_mpdcch_gt_3MHz_fdd
@@ -216,9 +264,9 @@ class pagingLTEM(paging):
 
         # Precalculate nB
         if (sib2.radioResourceConfigCommon.pcch_Config_v1310.nB_v1310 is not None):
-            nB = int(T * sib2.radioResourceConfigCommon.pcch_Config_v1310.nB_v1310)
+            nB = T * sib2.radioResourceConfigCommon.pcch_Config_v1310.nB_v1310
         else:
-            nB = int(T * sib2.radioResourceConfigCommon.pcch_Config.nB)
+            nB = T * sib2.radioResourceConfigCommon.pcch_Config.nB
 
         # Paging narrow bands.
         self.Nn = sib2.radioResourceConfigCommon.pcch_Config_v1310.paging_narrowBands_r13
@@ -236,12 +284,12 @@ class pagingLTEM(paging):
 
     def paging_carrier(self,imsi):
         UE_ID = self.get_UE_ID(imsi)
-        return m.floor((UE_ID / (self.N * self.Ns))) % self.Nn
+        return int(1+m.floor((UE_ID / (self.N * self.Ns))) % self.Nn)
 
 
 class pagingNB(paging):
-    def __init__(self,rel,debug):
-        super (pagingNB,self).__init__(rel,debug)
+    def __init__(self,rel,frac,debug):
+        super (pagingNB,self).__init__(rel,frac,debug)
         self.rel = rel
         self.debug = debug
         self.sf_pattern = sf_pattern_npdcch_or_mpdcch_gt_3MHz_fdd
@@ -313,7 +361,7 @@ class pagingNB(paging):
                 TeDRX = edrxie.TeDRX
                 L = edrxie.PTW
 
-        nB = int(T * sib2.radioResourceConfigCommon_r13.pcch_Config_r13.nB_r13)
+        nB = T * sib2.radioResourceConfigCommon_r13.pcch_Config_r13.nB_r13
         
         super(pagingNB,self).setparameters(T,TeDRX,nB,sf_pattern,modulo,20,L)
         return self.TeDRX > 0
@@ -337,10 +385,7 @@ class pagingNB(paging):
         while (n <= self.Nn-1 and wmod >= self.W[n]):
             n += 1
 
-        return n
-
-
-
+        return m.floor(n)
 
 #def bdiv(N,D):
 #

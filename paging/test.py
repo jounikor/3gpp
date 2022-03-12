@@ -59,6 +59,12 @@ prs.add_argument("--non-anchor",type=str,default=None,dest="non_anchor",nargs='+
 prs.add_argument("--paging-weight-anchor",type=str,default=None,dest="paging_weight_anchor",
     help="Weight of the anchor carrier.")
 
+
+# Handle fractional nB cases
+prs.add_argument("--fractional-nB",dest="fractional_nb",action="store_true",
+    help="Allow paging calculation in nB < 1 cases so that 0 < N < 1 is possible.")
+
+
 args = prs.parse_args()
 
 #
@@ -101,7 +107,6 @@ if (__name__ == "__main__"):
         sib22 = None
 
         # Check for non-anchor paging carriers and configurations
-        # THIS IS WORK IN PROGRESS
         if (args.rel > 13):
             nonanchors = None
             
@@ -139,14 +144,14 @@ if (__name__ == "__main__"):
 
     # Create paging objects
     if (args.rat_nbiot):
-        pg = paging.pagingNB(args.rel,args.debug)
+        pg = paging.pagingNB(args.rel,args.fractional_nb,args.debug)
         pg.configure(sib2,sib22,edrx_ie)
     else:
         # Some sanity checks
         if (args.system_bw not in (1.4,3,5,10,15,20)):
             raise ValueError(f"Invalid system bandwidth {args.system_bw}MHz")
 
-        pg = paging.pagingLTEM(args.system_bw,args.rel,args.debug)
+        pg = paging.pagingLTEM(args.system_bw,args.rel,args.fractional_nb,args.debug)
         pg.configure(sib2,drx_ie,edrx_ie)
 
     #
@@ -155,20 +160,18 @@ if (__name__ == "__main__"):
     #
 
     paging_carrier = pg.paging_carrier(args.imsi)
-    ph = False
     hsfn = 0
     sfn = 0
     sfn_count = 0
-    got_paged_eDRX = False
 
     # calculate simulation length
     if (pg.TeDRX > 0):
         sfn_max = 1024 * args.num_hsfn
-        inside_PTW = False
+        pg.init_PTW(False)
     else:
-        sfn_max = pg.T
+        sfn_max = max(256,pg.T)
         # If eDRX is not used we are always within the "PTW"..
-        inside_PTW = True
+        pg.init_PTW(True)
 
     # Simulation loop
     while (sfn_count < sfn_max):
@@ -181,50 +184,28 @@ if (__name__ == "__main__"):
         
             if (args.verbose):
                 print( "START-OF-HYPER-FRAME-------------------------------")
-            
-        # Check if we need are inside the PTW
-        if (ph and not inside_PTW):
-            # Case 1: PTW_sta < PTW_end
-            if (PTW_sta < PTW_end):
-                if (sfn >= PTW_sta and sfn <= PTW_end):
-                    inside_PTW = True
-    
-            # Case 2: PTW_sta > PTW_end i.e. PTW wrapped hyper frame boundary
-            if (PTW_sta > PTW_end):
-                if (sfn >= PTW_end and sfn <= PTW_sta):
-                    inside_PTW = True
-
-        got_paged = False
-
-        if (inside_PTW):
-            got_paged,pf,po = pg.gotpaged_DRX(args.imsi,sfn)
 
             if (ph):
-                got_paged_eDRX = True
+                pg.configure_PTW(PTW_sta,PTW_end,PTW_len)
+
+        inside_ptw = pg.inside_PTW_test(sfn)
+        got_paged = False
+
+        if (inside_ptw):
+            got_paged,pf,po = pg.gotpaged_DRX(args.imsi,sfn)
 
         # Do the print out..
         if (sfn % 256 == 0 and args.verbose):
             print(f"H-SFN   SFN     PH      PTW     PO      SF      PNB")
 
         if (got_paged):
-            print(  f"*{hsfn:4d}  {sfn:4d}     {'Y' if ph else 'N'}       {'Y' if inside_PTW else 'N'}     "
+            print(  f"*{hsfn:4d}  {sfn:4d}     {'Y' if ph else 'N'}       {'Y' if inside_ptw else 'N'}     "
                     f"{po:3d}     {pf:3d}       {paging_carrier} ")
         else:
-            print(  f"{hsfn:5d}  {sfn:4d}     {'Y' if ph else 'N'}       {'Y' if inside_PTW else 'N'}       "
-                    f"-       -       -")
+            if (args.verbose):
+                print(  f"{hsfn:5d}  {sfn:4d}     {'Y' if ph else 'N'}       {'Y' if inside_ptw else 'N'}       "
+                        f"-       -       -")
         
-        # If eDRX is enabled..
-        if (inside_PTW and ph):
-            PTW_len -= 1
-                
-            if (PTW_len == 0):
-                if (not got_paged_eDRX):
-                    raise alueError(f"** Invalid extended DRX setup. Paging Frame outside PTW.")
-                
-                inside_PTW = False
-                ph = False
-                got_paged_eDRX = False
-
         sfn_count += 1 
 
 
